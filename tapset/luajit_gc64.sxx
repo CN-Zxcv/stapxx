@@ -607,10 +607,10 @@ function luajit_debug_dumpstack(L, T, depth, base, simple)
                     line = luajit_debug_frameline(L, T, fn, pt, nextframe)
                     if (line < 0) {
                         line = $*pt->firstline
-                        //printf("using firstline %d\n", line)
+                        /* printf("using firstline %d\n", line) */
 
                     } else {
-                        //printf("GOT the lineno %d\n", line)
+                        /* printf("GOT the lineno %d\n", line) */
                     }
                 }
 
@@ -648,6 +648,18 @@ function luajit_debug_dumpstack(L, T, depth, base, simple)
     return bt
 }
 
+function luajit_get_curr_func(L)
+{
+    g = luajit_G(L)
+    vmstate = $*g->vmstate
+    if (vmstate >= 0 || (vmstate == -3 && $*g->jit_base->ptr64)) {
+        /* compiled Lua code */
+        base = $*g->jit_base->ptr64
+    } else {
+        base = $*L->base
+    }
+    return luajit_debug_dumpstack(L, 0, 1, base, 1)
+}
 
 function luajit_cur_thread(g)
 {
