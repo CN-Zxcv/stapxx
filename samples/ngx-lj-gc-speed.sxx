@@ -1,15 +1,14 @@
 #!/usr/bin/env stap++
 
 @use nginx.lua
-@use luajit
+@use luajit_gc64
 
 global old, G, freed
 
-probe process("$^liblua_path").function("lj_gc_step")
+probe process("$^libluajit_path").function("lj_gc_step")
 {
     if (G == 0) {
         L = ngx_lua_get_main_lua_vm()
-        //printf("L = %p\n", L)
         G = luajit_G(L)
     }
 
@@ -17,7 +16,7 @@ probe process("$^liblua_path").function("lj_gc_step")
     old = $*G->gc->total
 }
 
-probe process("$^liblua_path").function("lj_gc_step").return
+probe process("$^libluajit_path").function("lj_gc_step").return
 {
     if (old && G) {
         freed += old - $*G->gc->total
@@ -25,10 +24,13 @@ probe process("$^liblua_path").function("lj_gc_step").return
 }
 
 probe timer.s(1) {
-    if (target() == pid()) {
-        printf("LuaJIT GC freed: %d bytes/sec\n", freed)
-        freed = 0
-    }
+    printf("LuaJIT GC freed: %d bytes/sec\n", freed)
+    freed = 0
+}
+
+probe end {
+    printf("LuaJIT GC freed: %d bytes/sec\n", freed)
+    freed = 0
 }
 
 probe begin {
